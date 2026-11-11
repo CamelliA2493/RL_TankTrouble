@@ -1,0 +1,53 @@
+{
+  "name": "Laika50 hybrid pretrained",
+  "architecture": {
+    "observation_dim": 403,
+    "hidden": 128,
+    "gru": 32,
+    "parameters": 45770,
+    "templates": 7,
+    "targets": 8
+  },
+  "checkpoint": "pretrained.pt",
+  "sha256": "113b66940cc340c1ad1cb1dda1d8d2323d6660749718c068539aa4d0d4b74287",
+  "training_frames": 500741,
+  "training_games": 1984,
+  "training_initialization_seed": 20261110,
+  "evaluation": {
+    "episodes": 200,
+    "outcomes": {
+      "win": 176,
+      "loss": 16,
+      "draw": 8,
+      "timeout": 0
+    },
+    "win_rate": 0.88,
+    "wilson95": [
+      0.8276574790170326,
+      0.9180200729362449
+    ]
+  },
+  "evaluation_backend": "original_flash_v4.0; pinned Ruffle89a7049965f3090e706265670df309a5128233ac",
+  "swf_sha256": "188062aff7f7d969abb7f453f661d68f77d6ad9faf95baeaf8029a882c840a96",
+  "native_port_validation": {
+    "matching_games": 68,
+    "control_frames": 14781,
+    "scope": "paired action/outcome/frame equivalence on completed cases; extra replay stopped"
+  },
+  "human_keyboard_verified": true,
+  "pretraining_usage": "Load policy parameters and start a new optimizer; optimizer/RNG from the original run remain in this one checkpoint for provenance",
+  "game_entry_validation": {
+    "classic_user_laika_ready": true,
+    "classic_two_player_ready": true,
+    "classic_three_player_ready": true,
+    "native_human_keyboard": true,
+    "continuous_model_rounds_observed": 3
+  },
+  "cleanup_notes": "One retained checkpoint; old experiment outputs and duplicate runtime bundles removed. New fine-tuning uses policy initialization.",
+  "training_entry_validation": {
+    "local_cpu_rollout_and_update": true,
+    "local_resume_next_update": true,
+    "server_cuda_rollout_and_update": true,
+    "temporary_test_checkpoints_removed": true
+  }
+}

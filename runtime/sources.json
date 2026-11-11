@@ -1,0 +1,36 @@
+{
+  "repository": "https://github.com/xeri/TankTrouble",
+  "commit": "a09fef9f28ac6b4787d6262b0f1f58dea778c233",
+  "files": [
+    {
+      "path": "srv/includes/TankTrouble_v4.0.swf",
+      "url": "https://raw.githubusercontent.com/xeri/TankTrouble/a09fef9f28ac6b4787d6262b0f1f58dea778c233/srv/includes/TankTrouble_v4.0.swf",
+      "size": 366827,
+      "sha256": "188062aff7f7d969abb7f453f661d68f77d6ad9faf95baeaf8029a882c840a96"
+    },
+    {
+      "path": "srv/Assets/Crate.swf",
+      "url": "https://raw.githubusercontent.com/xeri/TankTrouble/a09fef9f28ac6b4787d6262b0f1f58dea778c233/srv/Assets/Crate.swf",
+      "size": 2357,
+      "sha256": "19c320ea8e28095699c5b32bf70cf8a2f5d343f8e892f2fe909f7d049b035f36"
+    },
+    {
+      "path": "srv/Assets/GameTank.swf",
+      "url": "https://raw.githubusercontent.com/xeri/TankTrouble/a09fef9f28ac6b4787d6262b0f1f58dea778c233/srv/Assets/GameTank.swf",
+      "size": 10126,
+      "sha256": "d1e004d4c60e2c19a5f7219c3e1fc57f535a3ffdafe8b3784d1ad25a06076fbd"
+    },
+    {
+      "path": "srv/Assets/Laika.swf",
+      "url": "https://raw.githubusercontent.com/xeri/TankTrouble/a09fef9f28ac6b4787d6262b0f1f58dea778c233/srv/Assets/Laika.swf",
+      "size": 18335,
+      "sha256": "c5bafd71685fca0d5b133827529ee307e7db39db7fd5361c306905bb8609b65e"
+    },
+    {
+      "path": "srv/Assets/Tank.swf",
+      "url": "https://raw.githubusercontent.com/xeri/TankTrouble/a09fef9f28ac6b4787d6262b0f1f58dea778c233/srv/Assets/Tank.swf",
+      "size": 188223,
+      "sha256": "cc116db1c16f14e5eb0bd2501fddf6d8e9d2324e38f7387dcbe1baebd3d84c1f"
+    }
+  ]
+}

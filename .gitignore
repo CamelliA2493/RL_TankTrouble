@@ -1,0 +1,32 @@
+# 本地独立运行时和编译产物；通过运行包分发
+/python/
+/bin/
+
+# 新训练、评估输出；保留 weights/pretrained.pt
+/runs/
+/logs/
+/server_reports/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# 本机配置和凭据
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+known_hosts
+.idea/
+.vscode/
+
+# 临时文件和打包副本
+*.log
+*.tmp
+*.pending
+*.zip
+*.tar.gz
+.DS_Store
+Thumbs.db
