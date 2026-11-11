@@ -1,0 +1,10 @@
+{
+  "candidate": "pretrained weights + phase2/3 tactics",
+  "decoder": "sample-policy",
+  "policy_seed_offset": 100000,
+  "decision_frames": 13,
+  "chase_crates": true,
+  "model_sha256": "113b66940cc340c1ad1cb1dda1d8d2323d6660749718c068539aa4d0d4b74287",
+  "tactics_sha256": "2014031e46ac6a750012f1e21821ec6ac10ad80960f34de1f9ddb5d2cd637283",
+  "policy_sha256": "71adb77f4d40dded31056745998d9a4f39578bfe34b8b945383c05f5d46ef6bd"
+}

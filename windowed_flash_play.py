@@ -85,6 +85,7 @@ def main():
     parser.add_argument("--fps",type=int,default=25)
     parser.add_argument("--record",type=Path)
     parser.add_argument("--frames",type=int,default=0)
+    parser.add_argument("--chase-crates",action="store_true")
     args=parser.parse_args()
     args.model=args.model.resolve();args.runner=args.runner.resolve()
     if not 1<=args.fps<=120 or not 0<=args.seed<2**31:
@@ -97,7 +98,7 @@ def main():
         sys.stdout=log.open("a",encoding="utf-8",buffering=1);sys.stderr=sys.stdout
     runtime=load_runtime(args.model)
     config=runtime["flash_config"].FlashConfig(runner=str(args.runner),movie=str(ROOT/"runtime/TankTrouble_v4.0.swf"))
-    agent=runtime["deploy"].HybridController(args.model,sample_policy=True)
+    agent=runtime["deploy"].HybridController(args.model,sample_policy=True,chase_crates=args.chase_crates)
     bridge=runtime["flash_env"].FlashBridge(config)
     print("原版SWF窗口：模型控制红色1P；真人控制绿色2P（方向键、M）。关闭窗口退出。",flush=True)
     try:

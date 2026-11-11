@@ -9,25 +9,105 @@ from flash_navigation import maze_distances
 
 
 TEMPLATES = ("Assault", "Sniper", "Defensive", "Guerrilla", "Hunter", "Flanking", "Control")
-NAV_CONFIG = dict(arrival_radius=.12, turn_deadband=.06, move_angle_limit=.22)
-AIM_CONFIG = dict(muzzle_offset=4.5/16, target_radius=.15, self_radius=.22,
-                  max_bounces=2, max_distance=12., turn_deadband=.09,
+NAV_CONFIG = dict(arrival_radius=.12, turn_deadband=.10, turn_release=.04, move_angle_limit=.22)
+AIM_CONFIG = dict(muzzle_offset=4.5/16, target_radius=.15, self_radius=.26, self_margin=.45,
+                  max_bounces=2, max_distance=12., turn_deadband=.10, turn_release=.04,
                   reposition_distance=.2, reposition_limit=40, trigger_mode="hold")
 DODGE_CONFIG = dict(horizon=32, hold_frames=8, body_radius=.26,
-                    trigger_clearance=.07, minimum_gain=.03, collision_radius=.21)
+                    trigger_clearance=.07, minimum_gain=.03, collision_radius=.21,
+                    hold_tolerance=.04)
+CRATE_CONFIG = dict(detour_budget=6, max_path=12, enemy_clearance=1.15)
 
 
-def control(obs, memory, enable_dodge=True, template=0, aggression=.5):
+def turn_command(error, memory, key, enter, release, step):
+    """按每帧实际旋转步长设置进入/退出死区：单步内不再反向，越过目标即停。"""
+    enter = max(enter, .6*step)
+    release = max(release, .5*step)
+    sign = int(np.sign(error))
+    previous = int(memory.get(key, 0))
+    if previous != 0 and sign == previous:
+        value = previous if abs(error) >= release else 0
+    elif previous != 0:
+        # 已越过目标：立即停；只有目标大幅跳到另一侧才反向。
+        value = sign if abs(error) > enter + 1.5*step else 0
+    else:
+        value = sign if abs(error) > enter else 0
+    memory[key] = value
+    return value
+
+
+def turn_step(tank):
+    """原版每帧旋转角（弧度），由公开 turnSpeed 得出。"""
+    return math.radians(max(.1, float(tank[13])*10.))
+
+
+
+def crate_goal(obs, max_width=12, max_height=10):
+    """部署可见信息：已落地箱子、迷宫可达、绕行成本低。返回(goal, info)或None。"""
+    tanks = np.asarray(obs["tanks"]).reshape(2,32)
+    if tanks[0,0] <= .5:
+        return None
+    entities = np.asarray(obs["entities"]).reshape(-1,16)
+    crates = entities[(entities[:,0]>.5)&(np.abs(entities[:,1]-9/13)<1e-5)&(entities[:,14]>.01)]
+    if len(crates)==0:
+        return None
+    width, height, walls, distances = maze_geometry(obs,max_width,max_height)
+    own = tanks[0,1:3]*[max_width,max_height]
+    own_tile = np.floor(own).astype(int).clip([0,0],[width-1,height-1])
+    own_id = int(own_tile[1]*width+own_tile[0])
+    enemy_alive = tanks[1,0] > .5
+    if enemy_alive:
+        enemy = tanks[1,1:3]*[max_width,max_height]
+        et = np.floor(enemy).astype(int).clip([0,0],[width-1,height-1])
+        enemy_id = int(et[1]*width+et[0])
+    best = None
+    for crate in crates:
+        position = crate[2:4]*[max_width,max_height]
+        tile = np.floor(position).astype(int).clip([0,0],[width-1,height-1])
+        crate_id = int(tile[1]*width+tile[0])
+        distance = distances[own_id,crate_id]
+        if not np.isfinite(distance) or distance > CRATE_CONFIG["max_path"]:
+            continue
+        if enemy_alive:
+            to_enemy = distances[crate_id,enemy_id]; between = distances[own_id,enemy_id]
+            if not (np.isfinite(to_enemy) and np.isfinite(between)):
+                continue
+            detour = float(distance)+float(to_enemy)-float(between)
+        else:
+            detour = 0.
+        if detour > CRATE_CONFIG["detour_budget"]:
+            continue
+        score = float(distance)+.5*max(detour,0.)
+        if best is None or score < best[0]:
+            best = (score, position.copy(), detour, float(distance))
+    if best is None:
+        return None
+    return best[1], dict(detour=round(best[2],3), distance=round(best[3],3))
+
+
+def control(obs, memory, enable_dodge=True, template=0, aggression=.5, chase_crates=False):
     """紧急躲弹覆盖当前动作；只有实际执行普通行为时才提交其内部进度。"""
-    tank = np.asarray(obs["tanks"]).reshape(2,32)[0]
+    tanks = np.asarray(obs["tanks"]).reshape(2,32)
+    tank = tanks[0]
     if not tank[0]:
         return 8, dict(reason="dead",intervention=False)
     if template not in range(len(TEMPLATES)) or not 0 <= aggression <= 1:
         raise ValueError("模板或攻击性参数无效")
     tentative = deepcopy(memory)
     baseline, ordinary = template_action(obs,tentative,template,aggression)
+    if chase_crates and ordinary["reason"] not in ("fire","release_trigger"):
+        target = crate_goal(obs)
+        if target is not None:
+            tanks = np.asarray(obs["tanks"]).reshape(2,32)
+            safe = True
+            if tanks[1,0] > .5:
+                safe = float(np.linalg.norm((tanks[0,1:3]-tanks[1,1:3])*[12,10])) > CRATE_CONFIG["enemy_clearance"]
+            if safe:
+                action, navigation = navigate(obs,target[0],tentative.setdefault("crate_navigation",{}))
+                baseline, ordinary = action, dict(navigation, reason="crate_navigate",
+                    crate=[round(float(v),3) for v in target[0]], **target[1])
     if enable_dodge:
-        action, emergency = dodge(obs,baseline)
+        action, emergency = dodge(obs,baseline,memory)
         if emergency["intervention"]:
             return action, dict(reason="emergency_dodge",intervention=True,
                                 baseline_action=baseline,ordinary=ordinary,emergency=emergency)
@@ -83,7 +163,7 @@ def template_action(obs, memory, template, aggression):
     if prior is not None and frame > prior["frame"]:
         velocity = (enemy-np.asarray(prior["position"]))/(frame-prior["frame"])
     memory["enemy_history"] = dict(frame=frame,position=enemy.tolist())
-    action, detail = aim(obs)
+    action, detail = aim(obs, memory=memory)
     retreating = template == 3 and frame < memory.get("retreat_until",-1)
     if detail["reason"] in ("fire","release_trigger") and not retreating:
         if template == 3:
@@ -129,8 +209,9 @@ def forecast_bullets(obs, segments):
     return np.asarray(result)
 
 
-def dodge(obs, baseline_action=8):
-    """按32帧几何净空选择短动作，每个真实帧可重新规划。"""
+def dodge(obs, baseline_action=8, memory=None):
+    """按32帧几何净空选择短动作；避弹期沿用上一帧动作以减少左右抖动。"""
+    memory = {} if memory is None else memory
     segments = wall_segments(obs)
     future = forecast_bullets(obs,segments)
     if future.shape[1] == 0:
@@ -165,7 +246,16 @@ def dodge(obs, baseline_action=8):
         clearance = float(np.linalg.norm(np.asarray(path)[:,None,:]-future,axis=2).min())-DODGE_CONFIG["body_radius"]
         scores.append(clearance)
     best = int(np.argmax(scores))
+    hold = memory.get("dodge_action")
+    if hold in actions:
+        index = actions.index(hold)
+        if scores[index] >= scores[best]-DODGE_CONFIG["hold_tolerance"]:
+            best = index
     intervene = scores[0]<DODGE_CONFIG["trigger_clearance"] and scores[best]>scores[0]+DODGE_CONFIG["minimum_gain"]
+    if intervene:
+        memory["dodge_action"] = actions[best]
+    else:
+        memory.pop("dodge_action", None)
     return (actions[best] if intervene else baseline_action), dict(reason="dodge" if intervene else "continue",
         intervention=intervene,baseline_clearance=scores[0],chosen_clearance=scores[best],candidate_scores=scores)
 
@@ -237,7 +327,9 @@ def predict_shot(position, heading, enemy, segments):
         own_distance = ray_target_distance(origin,direction,position,AIM_CONFIG["self_radius"])
         limit = min(wall_distance,AIM_CONFIG["max_distance"]-traveled)
         if min(enemy_distance,own_distance) <= limit:
-            result = "enemy" if enemy_distance < own_distance else "self"
+            # 反射近似有厚度误差：只有确认不会擦回自身才开火。
+            clear_enemy = enemy_distance+AIM_CONFIG["self_margin"] < own_distance
+            result = "enemy" if clear_enemy else "self"
             return dict(result=result,bounces=bounce,distance=traveled+min(enemy_distance,own_distance),path=path)
         if hit_axis is None or wall_distance > limit:
             break
@@ -249,16 +341,19 @@ def predict_shot(position, heading, enemy, segments):
     return dict(result="clear",bounces=len(path),distance=traveled,path=path)
 
 
-def aim(obs, max_width=12, max_height=10):
+def aim(obs, max_width=12, max_height=10, memory=None):
+    memory = {} if memory is None else memory
     tanks = np.asarray(obs["tanks"]).reshape(2,32)
     position, enemy = tanks[:,1:3]*[max_width,max_height]
     heading = math.atan2(float(tanks[0,4]),float(tanks[0,3]))
     segments = wall_segments(obs,max_width,max_height)
     current = predict_shot(position,heading,enemy,segments)
-    if tanks[0,18] > .5 and tanks[1,0] > .5 and current["result"] == "enemy":
+    known_weapon = float(tanks[0,18:27].sum()) > .5
+    if known_weapon and tanks[1,0] > .5 and current["result"] == "enemy":
+        memory.pop("aim_commit", None)
         released = tanks[0,6] > .5 or AIM_CONFIG["trigger_mode"]=="hold"
         return encode_action(fire=bool(released)), dict(reason="fire" if released else "release_trigger",prediction=current)
-    targets = [enemy]
+    targets = [("enemy", enemy)]
     reflected_planes = set()
     for axis, boundary, _, _, _ in segments:
         if (axis,boundary) in reflected_planes:
@@ -266,19 +361,30 @@ def aim(obs, max_width=12, max_height=10):
         reflected_planes.add((axis,boundary))
         reflected = enemy.copy()
         reflected[1-axis] = 2*boundary-reflected[1-axis]
-        targets.append(reflected)
+        targets.append((("reflect",axis,boundary), reflected))
     candidates = []
-    for target in targets:
+    for key, target in targets:
         delta = target-position
         angle = math.atan2(float(delta[0]),-float(delta[1]))
         prediction = predict_shot(position,angle,enemy,segments)
         if prediction["result"] == "enemy":
             error = (angle-heading+math.pi)%(2*math.pi)-math.pi
-            candidates.append((prediction["bounces"],abs(error),error))
+            candidates.append((prediction["bounces"],abs(error),error,key,angle))
     if candidates:
-        _, _, error = min(candidates)
-        turn = int(np.sign(error)) if abs(error)>AIM_CONFIG["turn_deadband"] else 0
-        return encode_action(turn=turn), dict(reason="align" if turn else "alignment_quantized",heading_error=error)
+        best = min(c[0] for c in candidates)
+        eligible = [c for c in candidates if c[0] == best]
+        previous = memory.get("aim_target")
+        chosen = next((c for c in eligible if c[3] == previous), min(eligible,key=lambda c:c[1]))
+        memory["aim_target"] = chosen[3]
+        _, _, error, _, angle = chosen
+        step = turn_step(tanks[0])
+        turn = turn_command(error, memory, "aim_turn", AIM_CONFIG["turn_deadband"],
+                            AIM_CONFIG["turn_release"], step)
+        # 小角度对准时继续前进：避免原地反复转向，也让观测/伪装更接近实战移动。
+        return encode_action(int(abs(error) < .35), turn=turn), dict(
+            reason="align" if turn else "alignment_quantized", heading_error=error, turn=turn)
+    memory.pop("aim_target", None)
+    memory["aim_turn"] = 0
     return encode_action(), dict(reason="no_shot",prediction=current)
 
 
@@ -293,7 +399,7 @@ def aim_and_navigate(obs, memory):
             memory["reposition_frames"] += 1
             return navigate(obs,tanks[1,1:3]*[12,10],memory.setdefault("navigation",{}))
         memory.pop("reposition_start")
-    action, detail = aim(obs)
+    action, detail = aim(obs, memory=memory)
     if detail["reason"] in ("no_shot","alignment_quantized"):
         memory.update(reposition_start=position.copy(),reposition_frames=1)
         return navigate(obs,tanks[1,1:3]*[12,10],memory.setdefault("navigation",{}))
@@ -343,7 +449,9 @@ def navigate(obs, goal, memory, max_width=12, max_height=10):
     desired = math.atan2(float(delta[0]), -float(delta[1]))
     heading = math.atan2(float(tank[4]), float(tank[3]))
     error = (desired-heading+math.pi) % (2*math.pi)-math.pi
-    turn = int(np.sign(error)) if abs(error) > NAV_CONFIG["turn_deadband"] else 0
+    step = turn_step(tank)
+    turn = turn_command(error, memory, "nav_turn", NAV_CONFIG["turn_deadband"],
+                        NAV_CONFIG["turn_release"], step)
     move = int(abs(error) < NAV_CONFIG["move_angle_limit"])
     return encode_action(move,turn), dict(reason="navigate", waypoint=np.asarray(waypoint).tolist(),
         heading_error=error, graph_distance=float(distances[current,destination]))

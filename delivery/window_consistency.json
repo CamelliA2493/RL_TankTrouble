@@ -1,0 +1,208 @@
+{
+  "seeds": 20,
+  "total_compared": 3594,
+  "total_action_mismatches": 0,
+  "total_key_mismatches": 0,
+  "games": [
+    {
+      "seed": 710010000,
+      "window_frames": 240,
+      "evaluation_frames": 197,
+      "compared": 197,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010001,
+      "window_frames": 240,
+      "evaluation_frames": 447,
+      "compared": 240,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010002,
+      "window_frames": 231,
+      "evaluation_frames": 177,
+      "compared": 177,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010003,
+      "window_frames": 240,
+      "evaluation_frames": 196,
+      "compared": 196,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010004,
+      "window_frames": 240,
+      "evaluation_frames": 615,
+      "compared": 240,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010005,
+      "window_frames": 220,
+      "evaluation_frames": 166,
+      "compared": 166,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010006,
+      "window_frames": 240,
+      "evaluation_frames": 235,
+      "compared": 235,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010007,
+      "window_frames": 240,
+      "evaluation_frames": 204,
+      "compared": 204,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010008,
+      "window_frames": 206,
+      "evaluation_frames": 78,
+      "compared": 78,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "draw",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010009,
+      "window_frames": 240,
+      "evaluation_frames": 161,
+      "compared": 161,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "draw",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010010,
+      "window_frames": 182,
+      "evaluation_frames": 128,
+      "compared": 128,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010011,
+      "window_frames": 240,
+      "evaluation_frames": 193,
+      "compared": 193,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010012,
+      "window_frames": 240,
+      "evaluation_frames": 347,
+      "compared": 240,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010013,
+      "window_frames": 165,
+      "evaluation_frames": 111,
+      "compared": 111,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010014,
+      "window_frames": 189,
+      "evaluation_frames": 135,
+      "compared": 135,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010015,
+      "window_frames": 240,
+      "evaluation_frames": 200,
+      "compared": 200,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010016,
+      "window_frames": 160,
+      "evaluation_frames": 106,
+      "compared": 106,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010017,
+      "window_frames": 240,
+      "evaluation_frames": 271,
+      "compared": 240,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010018,
+      "window_frames": 191,
+      "evaluation_frames": 137,
+      "compared": 137,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    },
+    {
+      "seed": 710010019,
+      "window_frames": 240,
+      "evaluation_frames": 210,
+      "compared": 210,
+      "action_mismatches": 0,
+      "key_mismatches": 0,
+      "outcome": "win",
+      "first_mismatch": []
+    }
+  ]
+}

@@ -21,12 +21,13 @@ PPO_CONFIG=dict(lr=3e-4,clip=.2,entropy=.01,value_coef=.5,epochs=4,
 
 
 def collect_episode(task):
-    weights,seed,rng_seed,deterministic=task
+    weights,seed,rng_seed,deterministic,options=task
     torch.set_num_threads(1)
     model=HybridPolicy().eval()
     model.load_state_dict(torch.load(weights,map_location="cpu",weights_only=False)["policy"])
     torch.manual_seed(rng_seed)
-    env=OriginalFlashEnv(FlashConfig(mode="laika",max_episode_frames=1500,auto_settle_dead=True))
+    env=OriginalFlashEnv(FlashConfig(mode="laika",max_episode_frames=1500,auto_settle_dead=True,
+                                     reward_mode=options["reward_mode"]))
     observations=[];choices=[];old_probs=[];values=[];rewards=[];durations=[];primitive=[]
     hidden=None;memory={};selected=None;aggression=.5;last_action=8;last_decision=0
     try:
@@ -48,7 +49,8 @@ def collect_episode(task):
             old_probs.append(float(prob));values.append(float(value))
             total=0.
             while env.state["frame"]<start+PPO_CONFIG["decision_frames"]:
-                action,_=control(obs,memory,template=selected,aggression=aggression)
+                action,_=control(obs,memory,template=selected,aggression=aggression,
+                                 chase_crates=options["chase_crates"])
                 primitive.append(action);last_action=action
                 obs,reward,ended,limited,info=env.step(action)
                 elapsed=env.state["frame"]-start
@@ -130,14 +132,30 @@ def main():
     parser.add_argument("--seed",type=int,default=456)
     parser.add_argument("--device",default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--from-scratch",action="store_true")
+    parser.add_argument("--reward-mode",choices=["standard","win_events"],default="standard")
+    parser.add_argument("--chase-crates",action="store_true")
+    parser.add_argument("--optimizer",choices=["adam","adamw"],default="adam")
+    parser.add_argument("--lr",type=float,default=3e-4)
+    parser.add_argument("--weight-decay",type=float,default=0.)
+    parser.add_argument("--entropy",type=float,default=.01)
     args=parser.parse_args()
+    PPO_CONFIG["entropy"]=args.entropy
     assert not args.output.exists() and args.frames>0 and args.workers>0 and args.episodes_per_rollout>0
     assert 0<=args.seed_start<2**31 and not (args.from_scratch and args.resume)
     torch.set_num_threads(1);torch.manual_seed(args.seed)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     rng=np.random.default_rng(args.seed)
     model=HybridPolicy().to(args.device)
-    optimizer=torch.optim.Adam(model.parameters(),lr=PPO_CONFIG["lr"])
+    decay=[p for n,p in model.named_parameters() if p.ndim>1 and not n.endswith("bias")]
+    no_decay=[p for n,p in model.named_parameters() if p.ndim<=1 or n.endswith("bias")]
+    groups=[dict(params=decay,weight_decay=args.weight_decay),dict(params=no_decay,weight_decay=0.)]
+    if args.optimizer=="adamw":
+        optimizer=torch.optim.AdamW(groups,lr=args.lr)
+    else:
+        optimizer=torch.optim.Adam(groups,lr=args.lr)
+    train_config=dict(reward_mode=args.reward_mode,chase_crates=args.chase_crates,
+                      optimizer=args.optimizer,lr=args.lr,weight_decay=args.weight_decay,
+                      entropy=args.entropy)
     source_names=["policy.py","tactics.py","trainer.py","flash_config.py","flash_env.py"]
     blobs={n:Path(n).read_bytes() for n in source_names}
     hashes={n:hashlib.sha256(b).hexdigest() for n,b in blobs.items()}
@@ -146,6 +164,7 @@ def main():
     frames=games=iteration=0
     if args.resume:
         assert state["source_hashes"]==hashes and state["ppo_config"]==PPO_CONFIG
+        assert state.get("train_config")==train_config,("训练配置与断点不一致",state.get("train_config"),train_config)
         assert state["seed_start"]==args.seed_start and state["training_seed"]==args.seed
         assert state["episodes_per_rollout"]==args.episodes_per_rollout
         optimizer.load_state_dict(state["optimizer"])
@@ -156,7 +175,7 @@ def main():
     args.output.mkdir(parents=True)
     for name,blob in blobs.items():(args.output/("source_"+name)).write_bytes(blob)
     record=dict(arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items()},
-        source_hashes=hashes,ppo_config=PPO_CONFIG,status="running",goal_passed=False)
+        source_hashes=hashes,ppo_config=PPO_CONFIG,train_config=train_config,status="running",goal_passed=False)
     (args.output/"run.json").write_text(json.dumps(record,indent=2))
     started=time.monotonic()
     with mp.get_context("spawn").Pool(args.workers) as pool:
@@ -164,7 +183,8 @@ def main():
             assert args.seed_start+games+args.episodes_per_rollout<2**31
             weights=args.output/"sampling.pt"
             torch.save(dict(policy={k:v.detach().cpu() for k,v in model.state_dict().items()}),weights)
-            tasks=[(str(weights),args.seed_start+games+i,args.seed+games+i+100000,False)
+            options=dict(reward_mode=args.reward_mode,chase_crates=args.chase_crates)
+            tasks=[(str(weights),args.seed_start+games+i,args.seed+games+i+100000,False,options)
                    for i in range(args.episodes_per_rollout)]
             episodes=pool.map(collect_episode,tasks)
             torch.save(episodes,args.output/f"rollout_{iteration+1:03d}.pt")
@@ -173,7 +193,8 @@ def main():
             checkpoint=dict(policy=model.state_dict(),optimizer=optimizer.state_dict(),frames=frames,games=games,
                 iteration=iteration,numpy_rng=rng.bit_generator.state,torch_rng=torch.get_rng_state(),
                 cuda_rng=torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
-                source_hashes=hashes,ppo_config=PPO_CONFIG,seed_start=args.seed_start,training_seed=args.seed,
+                source_hashes=hashes,ppo_config=PPO_CONFIG,train_config=train_config,
+                seed_start=args.seed_start,training_seed=args.seed,
                 episodes_per_rollout=args.episodes_per_rollout)
             path=args.output/f"checkpoint_{iteration:03d}.pt"
             torch.save(checkpoint,path.with_suffix(".pending"));path.with_suffix(".pending").replace(path)

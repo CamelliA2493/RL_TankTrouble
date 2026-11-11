@@ -16,12 +16,13 @@ DECISION_FRAMES = 13
 
 
 class HybridController:
-    def __init__(self, weights, sample_policy=False, policy_seed_offset=100000):
+    def __init__(self, weights, sample_policy=False, policy_seed_offset=100000, chase_crates=False):
         torch.set_num_threads(1)
         self.model = HybridPolicy().eval()
         self.model.load_state_dict(torch.load(weights, map_location="cpu", weights_only=False)["policy"])
         self.sample_policy = sample_policy
         self.policy_seed_offset = policy_seed_offset
+        self.chase_crates = chase_crates
         self.reset()
 
     def reset(self, seed=0):
@@ -56,7 +57,8 @@ class HybridController:
             self.aggression = float(choice[0, 0, 2])
             self.last_decision = frame
             self.next_decision = frame + DECISION_FRAMES
-        action, detail = control(obs, self.memory, template=self.selected, aggression=self.aggression)
+        action, detail = control(obs, self.memory, template=self.selected, aggression=self.aggression,
+                                 chase_crates=self.chase_crates)
         self.last_action = action
         detail.update(selected_template=self.selected, aggression=self.aggression)
         return action, detail
@@ -69,11 +71,12 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sample-policy", action="store_true")
     parser.add_argument("--policy-seed-offset", type=int, default=100000)
+    parser.add_argument("--chase-crates", action="store_true")
     args = parser.parse_args()
     # 正式保留集只能通过冻结评估入口使用。
     assert not 930000000 <= args.seed <= 930000199
     args.output.mkdir(parents=True, exist_ok=False)
-    agent = HybridController(args.model, args.sample_policy, args.policy_seed_offset)
+    agent = HybridController(args.model, args.sample_policy, args.policy_seed_offset, args.chase_crates)
     env = OriginalFlashEnv(FlashConfig(mode="laika", max_episode_frames=1500,
                                       auto_settle_dead=True, observe_events=True))
     try:

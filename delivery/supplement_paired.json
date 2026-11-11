@@ -1,0 +1,35 @@
+﻿{
+  "paired": 200,
+  "baseline_wins": 173,
+  "candidate_wins": 183,
+  "baseline_only": 11,
+  "candidate_only": 21,
+  "mcnemar_exact_p": 0.11018416518345475,
+  "win_rate_diff": 0.05,
+  "win_diff_ci": [
+    -0.0050000000000000044,
+    0.10499999999999998,
+    0.04945750000000002
+  ],
+  "jitter": {
+    "baseline": 532.3264331865508,
+    "candidate": 362.9144109883227,
+    "relative": -0.3182483747502703,
+    "diff_ci": [
+      -194.69976944279784,
+      -143.27535495329877
+    ],
+    "relative_ci": [
+      -0.3657525858284148,
+      -0.26914942790956375
+    ]
+  },
+  "opportunities": {
+    "baseline": 13,
+    "candidate": 16
+  },
+  "effective": {
+    "baseline": 0,
+    "candidate": 0
+  }
+}

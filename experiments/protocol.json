@@ -1,0 +1,145 @@
+{
+  "frozen_at": "2026-11-11T10:48:00+0800",
+  "objective": "原版 Flash v4.0 对官方 Laika：从 weights/pretrained.pt 执行阶段 0–5，99% 胜率后训练",
+  "weights_sha256": "113b66940cc340c1ad1cb1dda1d8d2323d6660749718c068539aa4d0d4b74287",
+  "swf_sha256": "188062aff7f7d969abb7f453f661d68f77d6ad9faf95baeaf8029a882c840a96",
+  "ruffle_commit": "89a7049965f3090e706265670df309a5128233ac",
+  "source_hashes": {
+    "tactics.py": "112bb685c6ad166d0e4aeb5d804d5b0075d36547c6f15fe70d7ca94419a42eff",
+    "policy.py": "71adb77f4d40dded31056745998d9a4f39578bfe34b8b945383c05f5d46ef6bd",
+    "trainer.py": "3c1c0040deba6a23a51b0c26178a0c99c028a5f50fd4238d4c3a6fdabb956400",
+    "evaluate.py": "5bba5ed40a16d1b1397587d060fcaa1cc5dc5056a6e8f6fe4f26f06d58c0537c",
+    "flash_env.py": "26720b253165dfd87072277045e538837054e7411fb4cce22e634921b72e5b70",
+    "flash_config.py": "6dd46d786b8da0ef427ddf3e6859eb06184f384acfbdd9d04b8b21c408723834",
+    "flash_navigation.py": "348e7d665b4b205df2cd19e796ccd57041dee0629d7b987ee51551a778e024cf",
+    "deploy.py": "8fa7baad3e8009aa172c9a37a9acebb584e5342004c17e6641a3ba888a824214",
+    "metrics.py": "2d7a7a9f74a41e152e08e491f0e9e4cf4de3609eec596de127f4d48162db5e11"
+  },
+  "executor_hashes": {
+    "bin/tank-flash-runner.exe": "322512d1eaa48fd8564ff352859361ce2b21c0493f9f8b2b62265bd64c12b8b4",
+    "bin/tank-flash-window.exe": "956c2ca1aaf338f0149bc92fd634775aeabee6d03858c4a731d4b43f69b1405c",
+    "bin/ruffle.exe": "7b821bac7d8accd07407902eac9544b8d906df4d6c2a099eb091f3e04512b199"
+  },
+  "environment": {
+    "server": {
+      "host": "connect.bjb1.seetacloud.com:47741",
+      "gpu": "NVIDIA GeForce RTX 4090 24564MiB",
+      "cpu_quota": "16 cores (cgroup 1600000/100000)",
+      "ram_gb": 1007,
+      "disk": "50G, 35G free",
+      "python": "3.10.22",
+      "torch": "2.5.1+cu118",
+      "numpy": "1.26.4",
+      "gymnasium": "1.0.0"
+    },
+    "local": {
+      "os": "Windows",
+      "python": "3.10.11",
+      "torch": "2.5.1+cpu"
+    }
+  },
+  "sampling": {
+    "decoder": "sample-policy（deterministic=False）",
+    "policy_seed_offset": 100000,
+    "physics_seed": "reset(seed=map_seed)",
+    "decision_frames": 13,
+    "controller": "tactics.control 逐帧，紧急避弹可即时打断"
+  },
+  "seed_plan": {
+    "train": {
+      "start": 1000000000,
+      "end": 1199999999,
+      "rule": "按 run 台账顺序分配，每局一个，不重复"
+    },
+    "diagnostic": {
+      "start": 1200000000,
+      "end": 1249999999,
+      "rule": "诊断/归因专用，可挑典型场景但不得进入选模或正式集"
+    },
+    "supplement": {
+      "start": 1250000000,
+      "end": 1250000199,
+      "rule": "仅当 U 机会<100 时启用的预登记补充诊断集，单列成绩"
+    },
+    "selection": {
+      "start": 1300000000,
+      "end": 1300000199,
+      "rule": "200 局选模，按序全用，不挑地图"
+    },
+    "formal": {
+      "start": 1400000000,
+      "end": 1400000999,
+      "rule": "1000 局正式盲测，冻结候选后只开一次"
+    },
+    "excluded": "所有 <1e9 的既有种子区间（含旧正式 930000000–930000199）一律排除",
+    "supplement_extended": {
+      "start": 1250000000,
+      "end": 1250001199,
+      "rule": "U 机会不足 100 时启用的预登记扩展诊断集（仅用于 U，禁用正式胜率分母），共 1200 局"
+    }
+  },
+  "metrics": {
+    "win_rate": "胜/全部开局；负、平、1500帧超时均计入分母；Wilson 95%",
+    "jitter_J": {
+      "controllable_frame": "env.step 前 player0 存活的一帧；auto_settle 帧不计",
+      "window": "8 个连续可控帧",
+      "movement": "窗口内 7 次逐帧位移的格数之和 < 0.25",
+      "turn_reversal": "转向指令 action//2%3-1 忽略 0 后相邻符号变化 >= 2 次",
+      "report": "合并重叠窗口，覆盖帧数/可控帧数*1000",
+      "extra": "紧急避弹子集、静止占比（逐帧位移<1e-3）、自杀、超时"
+    },
+    "items_U": {
+      "opportunity": "己方存活、箱子已落地、迷宫图可达、绕行预算内；同局同箱只记首次",
+      "detour_budget_edges": 6,
+      "max_approach_edges": 12,
+      "pickup_radius_tiles": 0.8,
+      "weapon_window_frames": 250,
+      "effective": "武器有效期内 hits 事件 owner=己方 victim=Laika 且该帧当前武器为拾取武器",
+      "defensive": "护盾/ElToro 效果无法用原版事件归因，单列不计入有效",
+      "report": "U=有效/机会；接近率、拾取率、拾取后使用率、有效使用率、每百局有效次数"
+    }
+  },
+  "gates": {
+    "phase2": {
+      "j_relative_drop": 0.3,
+      "selection_win_drop_max_pp": 1.0,
+      "timeout_increase_max_pp": 1.0
+    },
+    "phase3": {
+      "opportunities_min": 100,
+      "u_relative_gain": 0.2,
+      "u_absolute_gain_pp": 2.0,
+      "effective_per_100_games_increase": true,
+      "j_hold": true,
+      "win_guardrail": "同上",
+      "u_supplement": {
+        "start": 1250000000,
+        "end": 1250001199,
+        "note": "扩展集单列 U；机会数仍不足则如实报告"
+      }
+    },
+    "phase4": {
+      "selection_wins_min": 198,
+      "episodes": 200,
+      "j_gate": true,
+      "u_gate": true
+    },
+    "phase5": {
+      "formal_wins_min": 990,
+      "episodes": 1000,
+      "j_relative_drop": 0.3,
+      "u_relative_gain": 0.2,
+      "u_absolute_gain_pp": 2.0
+    }
+  },
+  "baseline_history": {
+    "episodes": 200,
+    "outcomes": {
+      "win": 176,
+      "loss": 16,
+      "draw": 8,
+      "timeout": 0
+    },
+    "note": "旧正式集 930000000–930000199，仅作历史对照，不进入新协议"
+  }
+}
