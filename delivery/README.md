@@ -27,7 +27,6 @@ J 差 −172.4/千帧（CI [−184.4, −160.7]）。
 | `candidate_config.json` | 采样解码、策略种子偏移、决策周期、追箱开关与哈希 |
 | `baseline_tactics.py` | 基线冻结战术，SHA256 `112bb685…2eff`（正式对照与 88% 历史成绩使用） |
 | `EVALUATION.md` | 阶段 0–5 结果、指标定义与未通过项 |
-| `highlights.mp4` | 4 局模型 vs 官方 Laika 精彩对局（带标题卡，1000×750，25fps） |
 
 原始 `weights/pretrained.pt` 未改动（哈希在阶段 0 与交付时一致）。所有实验在服务器
 `runs/<name>/` 独立目录中，含冻结源码、逐局记录与指标。
